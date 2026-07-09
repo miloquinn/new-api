@@ -35,7 +35,9 @@ type Pricing struct {
 	SupportedEndpointTypes []constant.EndpointType `json:"supported_endpoint_types"`
 	BillingMode            string                  `json:"billing_mode,omitempty"`
 	BillingExpr            string                  `json:"billing_expr,omitempty"`
-	PricingVersion         string                  `json:"pricing_version,omitempty"`
+	// TimedPrices 分时定价规则（北京时间，仅按量计费模型），供价格页展示
+	TimedPrices    []ratio_setting.TimedPriceRule `json:"timed_prices,omitempty"`
+	PricingVersion string                         `json:"pricing_version,omitempty"`
 }
 
 type PricingVendor struct {
@@ -313,6 +315,7 @@ func updatePricing() {
 			pricing.ModelRatio = modelRatio
 			pricing.CompletionRatio = ratio_setting.GetCompletionRatio(model)
 			pricing.QuotaType = 0
+			pricing.TimedPrices = ratio_setting.GetTimedPriceRules(model)
 		}
 		if cacheRatio, ok := ratio_setting.GetCacheRatio(model); ok {
 			pricing.CacheRatio = &cacheRatio

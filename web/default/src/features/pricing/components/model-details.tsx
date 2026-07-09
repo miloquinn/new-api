@@ -78,6 +78,7 @@ import type {
 import { DynamicPricingBreakdown } from './dynamic-pricing-breakdown'
 import { ModelDetailsApi } from './model-details-api'
 import { ModelDetailsPerformance } from './model-details-performance'
+import { TimedPriceSchedule } from './timed-price-schedule'
 
 // ----------------------------------------------------------------------------
 // Local UI helpers
@@ -1192,6 +1193,13 @@ export function ModelDetailsContent(props: ModelDetailsContentProps) {
               usdExchangeRate={props.usdExchangeRate}
               tokenUnit={props.tokenUnit}
               showRechargePrice={showRechargePrice}
+            />
+            <TimedPriceSchedule
+              model={props.model}
+              tokenUnit={props.tokenUnit}
+              showRechargePrice={showRechargePrice}
+              priceRate={props.priceRate}
+              usdExchangeRate={props.usdExchangeRate}
             />
             {isDynamic && (
               <DynamicPricingBreakdown billingExpr={props.model.billing_expr} />

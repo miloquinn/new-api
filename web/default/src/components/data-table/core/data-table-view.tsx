@@ -278,14 +278,32 @@ function renderTableBodyContent<TData>(
     return renderEmptyState(props, colSpan)
   }
 
-  return rows.map((row) =>
-    props.renderRow
+  return rows.map((row) => {
+    const renderedRow = props.renderRow
       ? props.renderRow(row, {
           getCellClassName: (columnId, className) =>
             cn(getColumnClassName(columnId, 'cell'), className),
         })
       : renderDefaultRow(props, row, getColumnClassName)
-  )
+
+    if (!props.renderExpandedRow || !row.getIsExpanded()) {
+      return renderedRow
+    }
+    return (
+      <React.Fragment key={row.id}>
+        {renderedRow}
+        <TableRow
+          data-expanded-panel
+          className='hover:bg-transparent'
+          key={`${row.id}-expanded`}
+        >
+          <TableCell colSpan={colSpan} className='bg-muted/20 p-0'>
+            {props.renderExpandedRow(row)}
+          </TableCell>
+        </TableRow>
+      </React.Fragment>
+    )
+  })
 }
 
 function renderEmptyState<TData>(

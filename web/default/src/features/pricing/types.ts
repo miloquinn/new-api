@@ -27,6 +27,13 @@ export type PricingVendor = {
   description?: string
 }
 
+/** 分时定价时段（分钟自北京时间 00:00 起，[start, end)，支持跨午夜） */
+export type TimedPriceWindow = {
+  start_minute: number
+  end_minute: number
+  ratio: number
+}
+
 export type PricingModel = {
   id: number
   model_name: string
@@ -54,6 +61,8 @@ export type PricingModel = {
   billing_mode?: string
   /** Raw expression describing dynamic / tiered billing */
   billing_expr?: string
+  /** 分时定价规则（北京时间），仅按量计费模型 */
+  timed_prices?: TimedPriceWindow[]
   /** Pricing version returned by backend, useful for cache busting */
   pricing_version?: string
   /**

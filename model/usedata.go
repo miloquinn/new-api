@@ -170,6 +170,30 @@ func GetQuotaDataGroupByUser(startTime int64, endTime int64) (quotaData []*Quota
 	return quotaDatas, err
 }
 
+// GetQuotaDataByUserIds aggregates usage for an explicit set of user ids,
+// used by organization department-scoped analytics. An empty userIds slice
+// yields no rows (never "all usage") so a caller that fails to resolve a
+// scope can never accidentally widen visibility. When byMember is true rows
+// are also grouped per user for member-level breakdowns.
+func GetQuotaDataByUserIds(userIds []int, startTime int64, endTime int64, byMember bool) (quotaData []*QuotaData, err error) {
+	if len(userIds) == 0 {
+		return []*QuotaData{}, nil
+	}
+	selectCols := "model_name, created_at, sum(count) as count, sum(quota) as quota, sum(token_used) as token_used"
+	groupCols := "model_name, created_at"
+	if byMember {
+		selectCols = "user_id, username, model_name, created_at, sum(count) as count, sum(quota) as quota, sum(token_used) as token_used"
+		groupCols = "user_id, username, model_name, created_at"
+	}
+	var quotaDatas []*QuotaData
+	err = DB.Table("quota_data").
+		Select(selectCols).
+		Where("user_id IN ? and created_at >= ? and created_at <= ?", userIds, startTime, endTime).
+		Group(groupCols).
+		Find(&quotaDatas).Error
+	return quotaDatas, err
+}
+
 func GetAllQuotaDates(startTime int64, endTime int64, username string) (quotaData []*QuotaData, err error) {
 	if username != "" {
 		return GetQuotaDataByUsername(username, startTime, endTime)

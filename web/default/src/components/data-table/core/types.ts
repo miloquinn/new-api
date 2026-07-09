@@ -52,6 +52,12 @@ export type DataTableViewProps<TData> = {
     row: Row<TData>,
     helpers: DataTableRenderRowHelpers
   ) => React.ReactNode
+  /**
+   * Renders a full-width panel row right below an expanded row. Only invoked
+   * while `row.getIsExpanded()` is true; the returned content is wrapped in a
+   * `<tr><td colSpan={...}>` by the table body.
+   */
+  renderExpandedRow?: (row: Row<TData>) => React.ReactNode
   getRowClassName?: (row: Row<TData>) => string | undefined
   getColumnClassName?: DataTableColumnClassName
   pinnedColumns?: DataTablePinnedColumn[]

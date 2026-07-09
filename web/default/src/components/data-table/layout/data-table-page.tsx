@@ -155,6 +155,13 @@ export type DataTablePageProps<TData> = {
   ) => React.ReactNode
 
   /**
+   * Full-width panel rendered below a row while it is expanded
+   * (`row.getIsExpanded()`). Enable expansion via the table's
+   * `getRowCanExpand` option.
+   */
+  renderExpandedRow?: (row: Row<TData>) => React.ReactNode
+
+  /**
    * Desktop column className resolver. Use for semantic alignment/spacing only;
    * fixed-column behavior should be configured with `pinnedColumns`.
    */
@@ -410,6 +417,7 @@ function renderMobile<TData>(
           emptyAction={props.emptyAction}
           skeletonKeyPrefix={props.skeletonKeyPrefix}
           renderRow={props.renderRow}
+          renderExpandedRow={props.renderExpandedRow}
           applyHeaderSize={props.applyHeaderSize}
           tableHeaderClassName={cn(
             '[background-color:var(--table-header)]',
@@ -508,6 +516,7 @@ function renderDesktop<TData>(
       emptyAction={props.emptyAction}
       skeletonKeyPrefix={props.skeletonKeyPrefix}
       renderRow={props.renderRow}
+      renderExpandedRow={props.renderExpandedRow}
       applyHeaderSize={props.applyHeaderSize}
       splitHeader={fixedHeight}
       tableContainerClassName={fixedHeight ? 'h-full min-h-0' : undefined}

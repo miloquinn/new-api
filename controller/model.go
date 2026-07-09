@@ -266,6 +266,20 @@ func ListModels(c *gin.Context, modelType int) {
 			}
 			userModelNames = append(userModelNames, modelName)
 		}
+		// 智能路由虚拟模型：任一候选模型对用户可用即在列表中展示。
+		// 计费发生在解析后的具体模型上，路由名本身不做计费配置过滤。
+		enabledModelSet := make(map[string]bool, len(models))
+		for _, modelName := range models {
+			enabledModelSet[modelName] = true
+		}
+		for _, router := range model.GetEnabledSmartRouters() {
+			for _, candidate := range router.GetModelList() {
+				if enabledModelSet[candidate] {
+					userModelNames = append(userModelNames, router.Name)
+					break
+				}
+			}
+		}
 	}
 
 	ownerByModel := map[string]string{}

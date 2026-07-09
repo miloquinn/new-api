@@ -17,10 +17,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useRef } from 'react'
 import type { Resolver } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import * as z from 'zod'
 
+import { Button } from '@/components/ui/button'
 import {
   Form,
   FormControl,
@@ -59,7 +62,12 @@ const _systemInfoSchema = z.object({
   }),
   SystemName: z.string().min(1),
   ServerAddress: z.string().optional(),
-  Logo: z.string().url().optional().or(z.literal('')),
+  Logo: z
+    .string()
+    .url()
+    .or(z.string().startsWith('data:image/'))
+    .optional()
+    .or(z.literal('')),
   Footer: z.string().optional(),
   About: z.string().optional(),
   HomePageContent: z.string().optional(),
@@ -83,6 +91,7 @@ function normalizeValue(value: unknown): string {
 export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
   const { t } = useTranslation()
   const updateOption = useUpdateOption()
+  const logoFileInputRef = useRef<HTMLInputElement>(null)
 
   const normalizedDefaults: SystemInfoFormValues = {
     theme: {
@@ -109,7 +118,12 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
       error: () => t('System name is required'),
     }),
     ServerAddress: z.string().optional(),
-    Logo: z.string().url().optional().or(z.literal('')),
+    Logo: z
+      .string()
+      .url({ error: () => t('Enter a valid URL or upload an image') })
+      .or(z.string().startsWith('data:image/'))
+      .optional()
+      .or(z.literal('')),
     Footer: z.string().optional(),
     About: z.string().optional(),
     HomePageContent: z.string().optional(),
@@ -173,6 +187,46 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
         }
       },
     })
+
+  // Downscale the picked image on the client (max 256px edge) and store it
+  // inline as a base64 data URL in the Logo option. Safari lacks webp export
+  // and silently falls back to png — both are accepted by the schema.
+  const handleLogoFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      toast.error(t('Please select an image file'))
+      return
+    }
+    try {
+      const bitmap = await createImageBitmap(file)
+      const maxEdge = 256
+      const scale = Math.min(
+        1,
+        maxEdge / Math.max(bitmap.width, bitmap.height)
+      )
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale))
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale))
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        toast.error(t('Failed to read the image, please try another file'))
+        return
+      }
+      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+      bitmap.close()
+      const dataUrl = canvas.toDataURL('image/webp', 0.9)
+      form.setValue('Logo', dataUrl, {
+        shouldDirty: true,
+        shouldValidate: true,
+      })
+    } catch {
+      toast.error(t('Failed to read the image, please try another file'))
+    }
+  }
 
   return (
     <>
@@ -276,15 +330,40 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
                 name='Logo'
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('Logo URL')}</FormLabel>
+                    <FormLabel>{t('Logo')}</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder={t('https://example.com/logo.png')}
-                        {...field}
-                      />
+                      <div className='flex items-center gap-2'>
+                        {field.value ? (
+                          <img
+                            src={field.value}
+                            alt={t('Logo')}
+                            className='border-border size-9 shrink-0 rounded-lg border object-cover'
+                          />
+                        ) : null}
+                        <Input
+                          placeholder={t('https://example.com/logo.png')}
+                          {...field}
+                        />
+                        <Button
+                          type='button'
+                          variant='outline'
+                          onClick={() => logoFileInputRef.current?.click()}
+                        >
+                          {t('Upload Image')}
+                        </Button>
+                        <input
+                          ref={logoFileInputRef}
+                          type='file'
+                          accept='image/*'
+                          className='hidden'
+                          onChange={(event) => void handleLogoFileChange(event)}
+                        />
+                      </div>
                     </FormControl>
                     <FormDescription>
-                      {t('URL to your logo image (optional)')}
+                      {t(
+                        'Enter an image URL, or upload a local image (stored inline as base64)'
+                      )}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

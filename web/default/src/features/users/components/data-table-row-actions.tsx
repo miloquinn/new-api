@@ -28,6 +28,7 @@ import {
   ShieldAlert,
   Link2,
   CreditCard,
+  BarChart3,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -46,6 +47,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { UserDetailDialog } from '@/features/dashboard/components/users/user-detail-dialog'
 import { UserSubscriptionsDialog } from '@/features/subscriptions/components/dialogs/user-subscriptions-dialog'
 
 import { manageUser, resetUserPasskey, resetUserTwoFA } from '../api'
@@ -72,6 +74,8 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const [resetTwoFAOpen, setResetTwoFAOpen] = useState(false)
   const [bindingDialogOpen, setBindingDialogOpen] = useState(false)
   const [subscriptionsDialogOpen, setSubscriptionsDialogOpen] = useState(false)
+  const [usageDialogOpen, setUsageDialogOpen] = useState(false)
+  const [usageRange, setUsageRange] = useState(30)
 
   const handleEdit = () => {
     setCurrentRow(user)
@@ -201,6 +205,18 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         <DropdownMenuItem
           onSelect={(event) => {
             event.preventDefault()
+            setUsageDialogOpen(true)
+          }}
+        >
+          {t('View Usage')}
+          <DropdownMenuShortcut>
+            <BarChart3 size={16} />
+          </DropdownMenuShortcut>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onSelect={(event) => {
+            event.preventDefault()
             setBindingDialogOpen(true)
           }}
         >
@@ -300,6 +316,21 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         onOpenChange={setSubscriptionsDialogOpen}
         user={{ id: user.id, username: user.username }}
         onSuccess={triggerRefresh}
+      />
+
+      <UserDetailDialog
+        target={
+          usageDialogOpen
+            ? {
+                id: user.id,
+                username: user.username,
+                displayName: user.display_name,
+              }
+            : null
+        }
+        onOpenChange={setUsageDialogOpen}
+        selectedRange={usageRange}
+        onRangeChange={setUsageRange}
       />
     </div>
   )

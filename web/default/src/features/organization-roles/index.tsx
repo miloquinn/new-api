@@ -25,6 +25,12 @@ import { toast } from 'sonner'
 
 import { SectionPageLayout } from '@/components/layout'
 import { Button } from '@/components/ui/button'
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs'
 
 import {
   createOrganizationInvitation,
@@ -50,6 +56,8 @@ import {
   type MemberAccountDraft,
 } from './members-section'
 import { OrganizationRoleManager } from './role-manager'
+import { OrganizationStructureTab } from './structure-tab'
+import { OrganizationUsageTab } from './usage-tab'
 import type {
   OrganizationInvitation,
   OrganizationMember,
@@ -61,6 +69,12 @@ const organizationRolesQueryKey = ['organization-roles'] as const
 const organizationMembersQueryKey = ['organization-members'] as const
 const organizationInvitationsQueryKey = ['organization-invitations'] as const
 const permissionCatalogQueryKey = ['organization-permission-catalog'] as const
+const organizationRoleTabs = {
+  structure: 'structure',
+  usage: 'usage',
+  roles: 'roles',
+  members: 'members',
+} as const
 
 const emptyCatalog: OrganizationPermissionCatalog = { resources: [], templates: [] }
 const emptyRoles: OrganizationRole[] = []
@@ -86,6 +100,9 @@ const initialMemberDraft: MemberAccountDraft = {
 export function OrganizationRoles() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
+  const [activeTab, setActiveTab] = useState<string>(
+    organizationRoleTabs.structure
+  )
   const [selectedId, setSelectedId] = useState<number | 'new' | null>(null)
   const [draft, setDraft] = useState<RoleDraft | null>(null)
   const [invitationDraft, setInvitationDraft] = useState<InvitationDraft>(
@@ -363,52 +380,90 @@ export function OrganizationRoles() {
     <SectionPageLayout>
       <SectionPageLayout.Title>{t('Organization Roles')}</SectionPageLayout.Title>
       <SectionPageLayout.Actions>
-        <Button onClick={beginCreate} disabled={catalog.resources.length === 0}>
-          <Plus className='size-4' />
-          {t('New role')}
-        </Button>
+        {activeTab === organizationRoleTabs.roles ? (
+          <Button onClick={beginCreate} disabled={catalog.resources.length === 0}>
+            <Plus className='size-4' />
+            {t('New role')}
+          </Button>
+        ) : null}
       </SectionPageLayout.Actions>
       <SectionPageLayout.Content>
-        <OrganizationRoleManager
-          catalog={catalog}
-          roles={roles}
-          organizationName={organizationName}
-          selectedId={selectedId}
-          draft={draft}
-          isLoading={catalogQuery.isLoading || rolesQuery.isLoading}
-          isSaving={saveMutation.isPending}
-          isDeleting={deleteMutation.isPending}
-          onSelectRole={selectRole}
-          onUpdateDraft={updateDraft}
-          onSetPermission={setPermission}
-          onSetResourcePermissions={setResourcePermissions}
-          onDuplicateRole={duplicateRole}
-          onDeleteRole={deleteDraft}
-          onSaveRole={saveDraft}
-        />
+        <Tabs value={activeTab} onValueChange={setActiveTab} className='gap-4'>
+          <TabsList aria-label={t('Organization Roles')}>
+            <TabsTrigger value={organizationRoleTabs.structure}>
+              {t('Organization Structure')}
+            </TabsTrigger>
+            <TabsTrigger value={organizationRoleTabs.usage}>
+              {t('Usage')}
+            </TabsTrigger>
+            <TabsTrigger value={organizationRoleTabs.roles}>
+              {t('Organization Roles')}
+            </TabsTrigger>
+            <TabsTrigger value={organizationRoleTabs.members}>
+              {t('Organization Members')}
+            </TabsTrigger>
+          </TabsList>
 
-        <OrganizationMembersSection
-          assignableRoles={assignableRoles}
-          roles={roles}
-          invitationDraft={invitationDraft}
-          memberDraft={memberDraft}
-          inviteLink={inviteLink}
-          latestInitialPassword={latestInitialPassword}
-          members={members}
-          invitations={invitations}
-          isMembersLoading={membersQuery.isLoading}
-          isInvitationsLoading={invitationsQuery.isLoading}
-          isCreatingInvitation={createInvitationMutation.isPending}
-          isCreatingMember={createMemberMutation.isPending}
-          isRevokingInvitation={revokeInvitationMutation.isPending}
-          onUpdateInvitationDraft={updateInvitationDraft}
-          onUpdateMemberDraft={updateMemberDraft}
-          onSubmitInvitation={submitInvitation}
-          onSubmitMemberAccount={submitMemberAccount}
-          onCopyText={copyText}
-          onRevokeInvitation={revokeInvitationMutation.mutate}
-          invitationStatusLabel={invitationStatusLabel}
-        />
+          <TabsContent value={organizationRoleTabs.structure}>
+            <OrganizationStructureTab
+              organizationName={organizationName ?? ''}
+              members={members}
+              roles={roles}
+              assignableRoles={assignableRoles}
+              isMembersLoading={membersQuery.isLoading}
+              membersQueryKey={organizationMembersQueryKey}
+            />
+          </TabsContent>
+
+          <TabsContent value={organizationRoleTabs.usage}>
+            <OrganizationUsageTab />
+          </TabsContent>
+
+          <TabsContent value={organizationRoleTabs.roles}>
+            <OrganizationRoleManager
+              catalog={catalog}
+              roles={roles}
+              organizationName={organizationName}
+              selectedId={selectedId}
+              draft={draft}
+              isLoading={catalogQuery.isLoading || rolesQuery.isLoading}
+              isSaving={saveMutation.isPending}
+              isDeleting={deleteMutation.isPending}
+              onSelectRole={selectRole}
+              onUpdateDraft={updateDraft}
+              onSetPermission={setPermission}
+              onSetResourcePermissions={setResourcePermissions}
+              onDuplicateRole={duplicateRole}
+              onDeleteRole={deleteDraft}
+              onSaveRole={saveDraft}
+            />
+          </TabsContent>
+
+          <TabsContent value={organizationRoleTabs.members}>
+            <OrganizationMembersSection
+              assignableRoles={assignableRoles}
+              roles={roles}
+              invitationDraft={invitationDraft}
+              memberDraft={memberDraft}
+              inviteLink={inviteLink}
+              latestInitialPassword={latestInitialPassword}
+              members={members}
+              invitations={invitations}
+              isMembersLoading={membersQuery.isLoading}
+              isInvitationsLoading={invitationsQuery.isLoading}
+              isCreatingInvitation={createInvitationMutation.isPending}
+              isCreatingMember={createMemberMutation.isPending}
+              isRevokingInvitation={revokeInvitationMutation.isPending}
+              onUpdateInvitationDraft={updateInvitationDraft}
+              onUpdateMemberDraft={updateMemberDraft}
+              onSubmitInvitation={submitInvitation}
+              onSubmitMemberAccount={submitMemberAccount}
+              onCopyText={copyText}
+              onRevokeInvitation={revokeInvitationMutation.mutate}
+              invitationStatusLabel={invitationStatusLabel}
+            />
+          </TabsContent>
+        </Tabs>
       </SectionPageLayout.Content>
     </SectionPageLayout>
   )

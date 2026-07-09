@@ -24,6 +24,8 @@ const (
 	OrganizationInvitationStatusExpired  = 3
 	OrganizationInvitationStatusRevoked  = 4
 
+	OrganizationDepartmentStatusEnabled = 1
+
 	OrganizationRoleOwner = "owner"
 )
 
@@ -42,6 +44,19 @@ type OrganizationMember struct {
 	UserId         int    `json:"user_id" gorm:"uniqueIndex:idx_org_member_user;index;not null"`
 	RoleKey        string `json:"role_key" gorm:"size:64;index;not null"`
 	DepartmentId   int    `json:"department_id" gorm:"index;default:0"`
+	Status         int    `json:"status" gorm:"type:int;default:1"`
+	CreatedAt      int64  `json:"created_at" gorm:"autoCreateTime;column:created_at"`
+	UpdatedAt      int64  `json:"updated_at" gorm:"autoUpdateTime;column:updated_at"`
+}
+
+// OrganizationDepartment is a node of the organization's department tree.
+// ParentId = 0 marks a top-level department; nesting depth is unrestricted.
+type OrganizationDepartment struct {
+	Id             int    `json:"id"`
+	OrganizationId int    `json:"organization_id" gorm:"index;not null"`
+	ParentId       int    `json:"parent_id" gorm:"index;default:0"`
+	Name           string `json:"name" gorm:"size:100;not null"`
+	Sort           int    `json:"sort" gorm:"default:0"`
 	Status         int    `json:"status" gorm:"type:int;default:1"`
 	CreatedAt      int64  `json:"created_at" gorm:"autoCreateTime;column:created_at"`
 	UpdatedAt      int64  `json:"updated_at" gorm:"autoUpdateTime;column:updated_at"`
@@ -381,6 +396,259 @@ func AcceptOrganizationInvitationWithTx(tx *gorm.DB, rawToken string, userId int
 	}).Error
 }
 
+func GetOrganizationDepartments(orgId int) ([]*OrganizationDepartment, error) {
+	if orgId == 0 {
+		return nil, errors.New("organization id is required")
+	}
+	var departments []*OrganizationDepartment
+	err := DB.Where("organization_id = ?", orgId).
+		Order("sort asc, id asc").
+		Find(&departments).Error
+	return departments, err
+}
+
+func GetOrganizationDepartmentById(orgId int, id int) (*OrganizationDepartment, error) {
+	if orgId == 0 || id == 0 {
+		return nil, errors.New("organization id and department id are required")
+	}
+	var department OrganizationDepartment
+	err := DB.Where("organization_id = ? AND id = ?", orgId, id).First(&department).Error
+	return &department, err
+}
+
+func CreateOrganizationDepartment(department *OrganizationDepartment) error {
+	if department == nil || department.OrganizationId == 0 {
+		return errors.New("organization id is required")
+	}
+	department.Name = strings.TrimSpace(department.Name)
+	if department.Name == "" {
+		return errors.New("department name is required")
+	}
+	department.Status = OrganizationDepartmentStatusEnabled
+	return DB.Transaction(func(tx *gorm.DB) error {
+		if department.ParentId != 0 {
+			var count int64
+			if err := tx.Model(&OrganizationDepartment{}).
+				Where("organization_id = ? AND id = ?", department.OrganizationId, department.ParentId).
+				Count(&count).Error; err != nil {
+				return err
+			}
+			if count == 0 {
+				return errors.New("parent department not found")
+			}
+		}
+		return tx.Create(department).Error
+	})
+}
+
+// wouldCreateDepartmentCycle reports whether re-parenting department `id`
+// under `parentId` would create a cycle, by walking the ancestor chain of the
+// new parent. `parents` maps department id -> parent id for one organization.
+func wouldCreateDepartmentCycle(parents map[int]int, id int, parentId int) bool {
+	// Bounded walk guards against pre-existing broken chains.
+	for step := 0; step <= len(parents); step++ {
+		if parentId == 0 {
+			return false
+		}
+		if parentId == id {
+			return true
+		}
+		parentId = parents[parentId]
+	}
+	return true
+}
+
+func UpdateOrganizationDepartment(orgId int, id int, name string, parentId int, sort int) error {
+	if orgId == 0 || id == 0 {
+		return errors.New("organization id and department id are required")
+	}
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return errors.New("department name is required")
+	}
+	if parentId == id {
+		return errors.New("department cannot be its own parent")
+	}
+	return DB.Transaction(func(tx *gorm.DB) error {
+		var departments []*OrganizationDepartment
+		if err := tx.Where("organization_id = ?", orgId).Find(&departments).Error; err != nil {
+			return err
+		}
+		parents := make(map[int]int, len(departments))
+		exists := false
+		parentExists := parentId == 0
+		for _, dept := range departments {
+			parents[dept.Id] = dept.ParentId
+			if dept.Id == id {
+				exists = true
+			}
+			if dept.Id == parentId {
+				parentExists = true
+			}
+		}
+		if !exists {
+			return errors.New("department not found")
+		}
+		if !parentExists {
+			return errors.New("parent department not found")
+		}
+		if wouldCreateDepartmentCycle(parents, id, parentId) {
+			return errors.New("department cannot be moved under its own descendant")
+		}
+		return tx.Model(&OrganizationDepartment{}).
+			Where("organization_id = ? AND id = ?", orgId, id).
+			Updates(map[string]interface{}{
+				"name":      name,
+				"parent_id": parentId,
+				"sort":      sort,
+			}).Error
+	})
+}
+
+func DeleteOrganizationDepartment(orgId int, id int) error {
+	if orgId == 0 || id == 0 {
+		return errors.New("organization id and department id are required")
+	}
+	return DB.Transaction(func(tx *gorm.DB) error {
+		var childCount int64
+		if err := tx.Model(&OrganizationDepartment{}).
+			Where("organization_id = ? AND parent_id = ?", orgId, id).
+			Count(&childCount).Error; err != nil {
+			return err
+		}
+		if childCount > 0 {
+			return errors.New("department has sub-departments, move or delete them first")
+		}
+		var memberCount int64
+		if err := tx.Model(&OrganizationMember{}).
+			Where("organization_id = ? AND department_id = ?", orgId, id).
+			Count(&memberCount).Error; err != nil {
+			return err
+		}
+		if memberCount > 0 {
+			return errors.New("department has members, move them out first")
+		}
+		return tx.Delete(&OrganizationDepartment{}, "organization_id = ? AND id = ?", orgId, id).Error
+	})
+}
+
+func CountOrganizationDepartmentMembers(orgId int) (map[int]int64, error) {
+	if orgId == 0 {
+		return nil, errors.New("organization id is required")
+	}
+	type departmentMemberCount struct {
+		DepartmentId int   `gorm:"column:department_id"`
+		Total        int64 `gorm:"column:total"`
+	}
+	var rows []departmentMemberCount
+	err := DB.Model(&OrganizationMember{}).
+		Select("department_id, count(*) as total").
+		Where("organization_id = ? AND status = ?", orgId, OrganizationMemberStatusEnabled).
+		Group("department_id").
+		Find(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	counts := make(map[int]int64, len(rows))
+	for _, row := range rows {
+		counts[row.DepartmentId] = row.Total
+	}
+	return counts, nil
+}
+
+func GetOrganizationMemberById(orgId int, id int) (*OrganizationMember, error) {
+	if orgId == 0 || id == 0 {
+		return nil, errors.New("organization id and member id are required")
+	}
+	var member OrganizationMember
+	err := DB.Where("organization_id = ? AND id = ?", orgId, id).First(&member).Error
+	return &member, err
+}
+
+// GetOrganizationOwnedByUser returns the organization the user owns, or
+// gorm.ErrRecordNotFound when the user owns none.
+func GetOrganizationOwnedByUser(userId int) (*Organization, error) {
+	if userId == 0 {
+		return nil, errors.New("user id is required")
+	}
+	var org Organization
+	err := DB.Where("owner_user_id = ? AND status = ?", userId, OrganizationStatusEnabled).
+		Order("id asc").
+		First(&org).Error
+	return &org, err
+}
+
+// GetOrganizationMembershipOfUser returns the user's own membership record
+// (first enabled one), or gorm.ErrRecordNotFound.
+func GetOrganizationMembershipOfUser(userId int) (*OrganizationMember, error) {
+	if userId == 0 {
+		return nil, errors.New("user id is required")
+	}
+	var member OrganizationMember
+	err := DB.Where("user_id = ? AND status = ?", userId, OrganizationMemberStatusEnabled).
+		Order("id asc").
+		First(&member).Error
+	return &member, err
+}
+
+// UpdateOrganizationMember changes a member's role, department, and status.
+// The organization owner is protected: their role must remain `owner` and
+// their membership cannot be disabled.
+func UpdateOrganizationMember(orgId int, memberId int, roleKey string, departmentId int, status int) (*OrganizationMember, error) {
+	if orgId == 0 || memberId == 0 {
+		return nil, errors.New("organization id and member id are required")
+	}
+	if roleKey == "" {
+		return nil, errors.New("role key is required")
+	}
+	if status != OrganizationMemberStatusEnabled && status != OrganizationMemberStatusDisabled {
+		return nil, errors.New("invalid member status")
+	}
+	var member OrganizationMember
+	err := DB.Transaction(func(tx *gorm.DB) error {
+		var org Organization
+		if err := tx.First(&org, "id = ?", orgId).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("organization_id = ? AND id = ?", orgId, memberId).First(&member).Error; err != nil {
+			return err
+		}
+		if member.UserId == org.OwnerUserId {
+			if roleKey != OrganizationRoleOwner {
+				return errors.New("the organization owner's role cannot be changed")
+			}
+			if status != OrganizationMemberStatusEnabled {
+				return errors.New("the organization owner cannot be disabled")
+			}
+		}
+		if departmentId != 0 {
+			var count int64
+			if err := tx.Model(&OrganizationDepartment{}).
+				Where("organization_id = ? AND id = ?", orgId, departmentId).
+				Count(&count).Error; err != nil {
+				return err
+			}
+			if count == 0 {
+				return errors.New("department not found")
+			}
+		}
+		if err := tx.Model(&OrganizationMember{}).
+			Where("organization_id = ? AND id = ?", orgId, memberId).
+			Updates(map[string]interface{}{
+				"role_key":      roleKey,
+				"department_id": departmentId,
+				"status":        status,
+			}).Error; err != nil {
+			return err
+		}
+		return tx.Where("organization_id = ? AND id = ?", orgId, memberId).First(&member).Error
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &member, nil
+}
+
 func marshalOrganizationPermissions(permissions orgauth.PermissionMatrix) (string, error) {
 	normalized := orgauth.NormalizePermissions(permissions)
 	data, err := common.Marshal(normalized)
@@ -400,4 +668,49 @@ func ParseOrganizationPermissions(data string) orgauth.PermissionMatrix {
 		return orgauth.EmptyPermissionMatrix()
 	}
 	return orgauth.NormalizePermissions(permissions)
+}
+
+// CollectDepartmentSubtreeIds returns rootId plus all of its descendant
+// department ids within one organization. The walk is bounded by the total
+// department count so a corrupted parent chain can never loop forever.
+func CollectDepartmentSubtreeIds(orgId int, rootId int) ([]int, error) {
+	departments, err := GetOrganizationDepartments(orgId)
+	if err != nil {
+		return nil, err
+	}
+	childrenByParent := make(map[int][]int, len(departments))
+	for _, dept := range departments {
+		childrenByParent[dept.ParentId] = append(childrenByParent[dept.ParentId], dept.Id)
+	}
+	result := make([]int, 0, len(departments))
+	visited := make(map[int]bool, len(departments))
+	queue := []int{rootId}
+	for len(queue) > 0 && len(result) <= len(departments) {
+		current := queue[0]
+		queue = queue[1:]
+		if visited[current] {
+			continue
+		}
+		visited[current] = true
+		result = append(result, current)
+		queue = append(queue, childrenByParent[current]...)
+	}
+	return result, nil
+}
+
+// GetOrganizationMemberUserIds returns the enabled member user ids for the
+// organization, optionally restricted to a set of department ids. An empty
+// departmentIds slice means "all members of the organization".
+func GetOrganizationMemberUserIds(orgId int, departmentIds []int) ([]int, error) {
+	if orgId == 0 {
+		return nil, errors.New("organization id is required")
+	}
+	query := DB.Model(&OrganizationMember{}).
+		Where("organization_id = ? AND status = ?", orgId, OrganizationMemberStatusEnabled)
+	if len(departmentIds) > 0 {
+		query = query.Where("department_id IN ?", departmentIds)
+	}
+	var userIds []int
+	err := query.Pluck("user_id", &userIds).Error
+	return userIds, err
 }

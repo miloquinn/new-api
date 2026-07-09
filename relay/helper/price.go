@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/pkg/billingexpr"
@@ -106,6 +107,14 @@ func ModelPriceHelper(c *gin.Context, info *relaycommon.RelayInfo, promptTokens 
 			if !acceptUnsetRatio {
 				return types.PriceData{}, modelPriceNotConfiguredError(matchName, info.UserId)
 			}
+		}
+		// 时段价格：命中北京时间时段时用该时段的主价格倍率整体替换基础倍率，
+		// 补全/缓存等相对倍率随之等比联动。预扣费与结算共用本次快照，
+		// 跨时段边界的请求按请求开始时刻计价。
+		if timedRatio, timedWindow, ok := ratio_setting.GetTimedModelRatio(info.OriginModelName); ok {
+			modelRatio = timedRatio
+			common.SetContextKey(c, constant.ContextKeyTimedPriceWindow, timedWindow)
+			logger.LogDebug(c, "timed price applied: model=%s window=%s ratio=%g", info.OriginModelName, timedWindow, timedRatio)
 		}
 		completionRatio = ratio_setting.GetCompletionRatio(info.OriginModelName)
 		cacheRatio, _ = ratio_setting.GetCacheRatio(info.OriginModelName)

@@ -42,6 +42,14 @@ const (
 	ContextKeyAutoGroupIndex      ContextKey = "auto_group_index"
 	ContextKeyAutoGroupRetryIndex ContextKey = "auto_group_retry_index"
 
+	// ContextKeySmartRouter 记录本次请求命中的智能路由名（客户端请求的虚拟模型名），
+	// 用于消费日志展示原始请求模型。
+	ContextKeySmartRouter ContextKey = "smart_router"
+
+	// ContextKeyTimedPriceWindow 记录本次请求命中的时段价格时段（如 "00:00-08:00"，北京时间），
+	// 用于消费日志展示分时计价信息。
+	ContextKeyTimedPriceWindow ContextKey = "timed_price_window"
+
 	/* user related keys */
 	ContextKeyUserId      ContextKey = "id"
 	ContextKeyUserSetting ContextKey = "user_setting"

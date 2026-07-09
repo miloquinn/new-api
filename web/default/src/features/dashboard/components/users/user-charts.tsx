@@ -18,10 +18,11 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useQuery } from '@tanstack/react-query'
 import { VChart } from '@visactor/react-vchart'
-import { Users, Loader2 } from 'lucide-react'
+import { Users, Loader2, ChevronRight } from 'lucide-react'
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { StatusBadge } from '@/components/status-badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useTheme } from '@/context/theme-provider'
@@ -39,8 +40,11 @@ import type {
   ProcessedUserChartData,
   UserChartsFilters,
 } from '@/features/dashboard/types'
+import { formatQuota } from '@/lib/format'
 import { getRollingDateRange, type TimeGranularity } from '@/lib/time'
 import { VCHART_OPTION } from '@/lib/vchart'
+
+import { UserDetailDialog } from './user-detail-dialog'
 
 let themeManagerPromise: Promise<
   (typeof import('@visactor/vchart'))['ThemeManager']
@@ -153,6 +157,86 @@ export function UserCharts(props: UserChartsProps) {
     [userData, isLoading, timeGranularity, t, topUserLimit]
   )
 
+  // Aggregate the raw per-user rows into a clickable leaderboard so an admin
+  // can drill from "who spends the most" into a single user's detail.
+  const userLeaderboard = useMemo(() => {
+    const map = new Map<
+      number,
+      { userId: number; username: string; quota: number; count: number }
+    >()
+    for (const item of userData ?? []) {
+      if (item.user_id === undefined) continue
+      const entry = map.get(item.user_id) ?? {
+        userId: item.user_id,
+        username: item.username ?? `#${item.user_id}`,
+        quota: 0,
+        count: 0,
+      }
+      entry.quota += item.quota ?? 0
+      entry.count += item.count ?? 0
+      map.set(item.user_id, entry)
+    }
+    return [...map.values()]
+      .sort((a, b) => b.quota - a.quota)
+      .slice(0, topUserLimit)
+  }, [userData, topUserLimit])
+
+  const [detailTarget, setDetailTarget] = useState<{
+    id: number
+    username?: string
+  } | null>(null)
+  const [detailRange, setDetailRange] = useState(30)
+
+  let leaderboardBody = null
+  if (isLoading) {
+    leaderboardBody = (
+      <div className='flex flex-col gap-2 p-3'>
+        <Skeleton className='h-8 w-full' />
+        <Skeleton className='h-8 w-full' />
+        <Skeleton className='h-8 w-full' />
+      </div>
+    )
+  } else if (userLeaderboard.length === 0) {
+    leaderboardBody = (
+      <div className='text-muted-foreground py-8 text-center text-sm'>
+        {t('No usage in this period')}
+      </div>
+    )
+  } else {
+    leaderboardBody = (
+      <ul className='divide-border/60 divide-y'>
+        {userLeaderboard.map((user, index) => (
+          <li key={user.userId}>
+            <button
+              type='button'
+              className='hover:bg-muted/40 flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors sm:px-5'
+              onClick={() =>
+                setDetailTarget({ id: user.userId, username: user.username })
+              }
+            >
+              <span className='text-muted-foreground/60 w-5 text-xs tabular-nums'>
+                {index + 1}
+              </span>
+              <span className='min-w-0 flex-1 truncate font-medium'>
+                {user.username}
+              </span>
+              <StatusBadge
+                label={t('{{count}} requests', { count: user.count })}
+                variant='neutral'
+                size='sm'
+                copyable={false}
+              />
+              <span className='font-mono tabular-nums'>
+                {formatQuota(user.quota)}
+              </span>
+              <ChevronRight className='text-muted-foreground/50 size-4 shrink-0' />
+            </button>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+
   return (
     <div className='space-y-3'>
       <div className='flex items-center gap-1.5 overflow-x-auto pb-1 sm:gap-2'>
@@ -256,6 +340,27 @@ export function UserCharts(props: UserChartsProps) {
           )
         })}
       </div>
+
+      {/* Clickable leaderboard: drill from a user into their usage detail */}
+      <div className='overflow-hidden rounded-lg border'>
+        <div className='flex w-full items-center gap-2 border-b px-3 py-2 sm:px-5 sm:py-3'>
+          <Users className='text-muted-foreground/60 size-4' />
+          <div className='text-sm font-semibold'>{t('User Spend Detail')}</div>
+          <span className='text-muted-foreground/60 text-xs'>
+            {t('Click a user to view details')}
+          </span>
+        </div>
+        {leaderboardBody}
+      </div>
+
+      <UserDetailDialog
+        target={detailTarget}
+        onOpenChange={(open) => {
+          if (!open) setDetailTarget(null)
+        }}
+        selectedRange={detailRange}
+        onRangeChange={setDetailRange}
+      />
     </div>
   )
 }

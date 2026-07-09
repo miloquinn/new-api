@@ -105,6 +105,10 @@ func main() {
 	// 热更新配置
 	go model.SyncOptions(common.SyncFrequency)
 
+	// 智能路由缓存：与内存缓存开关无关，始终加载并周期同步
+	model.LoadSmartRouterCache()
+	go model.SyncSmartRouterCache(common.SyncFrequency)
+
 	// 周期性重载授权策略，保证多节点/多 master 部署下权限变更能传播到每个实例
 	go authz.StartPolicySync(common.SyncFrequency)
 

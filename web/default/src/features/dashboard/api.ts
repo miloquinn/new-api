@@ -66,6 +66,32 @@ export async function getUserQuotaDataByUsers(params: {
   return res.data
 }
 
+export interface UserQuotaDetailResponse {
+  user: {
+    id: number
+    username: string
+    display_name: string
+    quota: number
+    used_quota: number
+    request_count: number
+  }
+  items: QuotaDataItem[]
+}
+
+// Fetch a single user's per-model usage. Authorization is enforced server-side:
+// admins see anyone, other callers only users within their organization scope.
+export async function getUserQuotaDetail(
+  userId: number,
+  params: { start_timestamp: number; end_timestamp: number }
+) {
+  const res = await api.get<{
+    success: boolean
+    message?: string
+    data?: UserQuotaDetailResponse
+  }>(`/api/data/user/${userId}`, { params })
+  return res.data
+}
+
 export async function getFlowQuotaDates(
   params: {
     start_timestamp: number

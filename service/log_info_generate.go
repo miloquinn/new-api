@@ -86,6 +86,12 @@ func GenerateTextOtherInfo(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, m
 		other["is_model_mapped"] = true
 		other["upstream_model_name"] = relayInfo.UpstreamModelName
 	}
+	if smartRouter := common.GetContextKeyString(ctx, constant.ContextKeySmartRouter); smartRouter != "" {
+		other["smart_router"] = smartRouter
+	}
+	if timedPriceWindow := common.GetContextKeyString(ctx, constant.ContextKeyTimedPriceWindow); timedPriceWindow != "" {
+		other["timed_price_window"] = timedPriceWindow
+	}
 
 	isSystemPromptOverwritten := common.GetContextKeyBool(ctx, constant.ContextKeySystemPromptOverride)
 	if isSystemPromptOverwritten {

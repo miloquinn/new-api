@@ -1,0 +1,17 @@
+{
+  "Please select an image file": "Please select an image file",
+  "Failed to read the image, please try another file": "Failed to read the image, please try another file",
+  "Enter an image URL, or upload a local image (stored inline as base64)": "Enter an image URL, or upload a local image (stored inline as base64)",
+  "Enter a valid URL or upload an image": "Enter a valid URL or upload an image",
+  "Delete department \"{{name}}\"? Departments with sub-departments or members cannot be deleted.": "Delete department \"{{name}}\"? Departments with sub-departments or members cannot be deleted.",
+  "Disable \"{{name}}\"? They will lose access to this organization.": "Disable \"{{name}}\"? They will lose access to this organization.",
+  "Enable \"{{name}}\" and restore their organization access?": "Enable \"{{name}}\" and restore their organization access?",
+  "Reset the password for \"{{name}}\"? A new random password will be generated.": "Reset the password for \"{{name}}\"? A new random password will be generated.",
+  "This user does not belong to any organization.": "This user does not belong to any organization.",
+  "Reset the password from the user row actions menu instead.": "Reset the password from the user row actions menu instead.",
+  "Usage is scoped to what your organization role allows you to see.": "Usage is scoped to what your organization role allows you to see.",
+  "Per-model usage for this user within the selected window.": "Per-model usage for this user within the selected window.",
+  "Failed to load usage data": "Failed to load usage data",
+  "Click a user to view details": "Click a user to view details",
+  "With Channel": "With Channel"
+}

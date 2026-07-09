@@ -87,6 +87,41 @@ export interface OrganizationMember {
   updated_at: number
 }
 
+export interface OrganizationDepartment {
+  id: number
+  organization_id: number
+  parent_id: number
+  name: string
+  sort: number
+  status: number
+  created_at: number
+  updated_at: number
+}
+
+export interface OrganizationDepartmentsResponse {
+  organization: Organization
+  departments: OrganizationDepartment[]
+  member_counts: Record<string, number>
+}
+
+export interface OrganizationDepartmentPayload {
+  id?: number
+  name: string
+  parent_id: number
+  sort?: number
+}
+
+export interface OrganizationMemberUpdatePayload {
+  id: number
+  role_key: string
+  department_id: number
+}
+
+export interface OrganizationMemberResetPasswordResponse {
+  member: OrganizationMember
+  initial_password: string
+}
+
 export interface OrganizationInvitation {
   id: number
   organization_id: number

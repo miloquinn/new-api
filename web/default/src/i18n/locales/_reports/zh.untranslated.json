@@ -1,0 +1,7 @@
+{
+  "All prices are in CNY per 1M tokens.": "所有价格均以人民币每百万 tokens 计。",
+  "Set the main price in CNY per 1M tokens. Other prices are derived automatically unless overridden in advanced options.": "设置人民币每百万 tokens 的主价格，其他价格根据主价格自动关联计算，除非在高级选项中手动设置。",
+  "1M tokens": "百万 tokens",
+  "Periods use Beijing time (UTC+8). Cross-midnight periods like 22:00-06:00 are supported. Time not covered by any period uses the base price.": "时段按北京时间（UTC+8）解释，支持跨午夜时段（如 22:00-06:00）；未被任何时段覆盖的时间使用基础价格。",
+  "Beijing time (UTC+8)": "北京时间（UTC+8）"
+}

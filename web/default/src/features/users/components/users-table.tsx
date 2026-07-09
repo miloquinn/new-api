@@ -39,6 +39,7 @@ import {
 } from '../constants'
 import type { User } from '../types'
 import { DataTableBulkActions } from './data-table-bulk-actions'
+import { UserOrgStructurePanel } from './user-org-structure-panel'
 import { useUsersColumns } from './users-columns'
 import { useUsers } from './users-provider'
 
@@ -138,6 +139,8 @@ export function UsersTable() {
     data: users,
     columns,
     enableRowSelection: true,
+    withExpandedRowModel: true,
+    getRowCanExpand: () => true,
     columnFilters,
     globalFilter,
     pagination,
@@ -192,13 +195,13 @@ export function UsersTable() {
           },
         ],
       }}
-      getRowClassName={(row, { isMobile }) =>
-        isDisabledUserRow(row.original)
-          ? isMobile
-            ? DISABLED_ROW_MOBILE
-            : DISABLED_ROW_DESKTOP
-          : undefined
-      }
+      getRowClassName={(row, { isMobile }) => {
+        if (!isDisabledUserRow(row.original)) return undefined
+        return isMobile ? DISABLED_ROW_MOBILE : DISABLED_ROW_DESKTOP
+      }}
+      renderExpandedRow={(row) => (
+        <UserOrgStructurePanel userId={row.original.id} />
+      )}
       bulkActions={<DataTableBulkActions table={table} />}
     />
   )

@@ -26,6 +26,10 @@ For commercial licensing, please contact support@quantumnous.com
  * that activates it. Loaded globally so font-switching is instantaneous
  * with no FOUT once the variable is fetched. */
 @import '@fontsource-variable/lora';
+/* Display face (Bricolage Grotesque) backing `--font-display` — used for
+ * headings and brand marks to give the bright-SaaS theme its own voice.
+ * Latin-only; CJK headings fall back through the sans stack. */
+@import '@fontsource-variable/bricolage-grotesque';
 
 @import './theme.css';
 @import './theme-presets.css';
@@ -62,6 +66,16 @@ For commercial licensing, please contact support@quantumnous.com
      * (defined in theme.css, swapped by `[data-theme-font='...']` blocks
      * in theme-presets.css). Defaults to the project's humanist sans. */
     font-family: var(--font-body);
+  }
+
+  /* Display face for headings — gives the product a distinct typographic
+   * voice while body copy stays on the humanist sans. CJK glyphs fall back
+   * to the sans stack declared in `--font-display` (theme.css). */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
   }
 
   /* Keep sticky headers stable while primitives lock body scrolling. */
@@ -493,11 +507,11 @@ For commercial licensing, please contact support@quantumnous.com
   @media (min-width: 641px) {
     [data-slot='card']:not([data-card-hover='false']):hover {
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgb(0 0 0 / 0.06);
+      box-shadow: var(--soft-shadow-md);
     }
 
     .dark [data-slot='card']:not([data-card-hover='false']):hover {
-      box-shadow: 0 4px 12px rgb(0 0 0 / 0.3);
+      box-shadow: var(--soft-shadow-md);
     }
   }
 

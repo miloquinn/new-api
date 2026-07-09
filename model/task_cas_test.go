@@ -47,6 +47,11 @@ func TestMain(m *testing.M) {
 		&SubscriptionOrder{},
 		&UserSubscription{},
 		&UserOAuthBinding{},
+		&Organization{},
+		&OrganizationMember{},
+		&OrganizationInvitation{},
+		&OrganizationRole{},
+		&OrganizationDepartment{},
 		&PerfMetric{},
 		&SystemInstance{},
 		&SystemTask{},
@@ -73,6 +78,10 @@ func truncateTables(t *testing.T) {
 		DB.Exec("DELETE FROM subscription_plans")
 		DB.Exec("DELETE FROM user_subscriptions")
 		DB.Exec("DELETE FROM user_oauth_bindings")
+		DB.Exec("DELETE FROM organization_roles")
+		DB.Exec("DELETE FROM organization_invitations")
+		DB.Exec("DELETE FROM organization_members")
+		DB.Exec("DELETE FROM organizations")
 		DB.Exec("DELETE FROM perf_metrics")
 		DB.Exec("DELETE FROM system_instances")
 		DB.Exec("DELETE FROM system_task_locks")

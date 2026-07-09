@@ -112,7 +112,7 @@ export function OrganizationMembersSection({
   const { t } = useTranslation()
 
   return (
-    <Card className='mt-4'>
+    <Card>
       <CardHeader>
         <CardTitle>{t('Organization Members')}</CardTitle>
         <CardDescription>

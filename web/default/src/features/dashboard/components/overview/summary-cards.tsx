@@ -210,6 +210,18 @@ export function SummaryCards() {
   const healthCfg = HEALTH_CONFIG[healthLevel]
   const runwayDays = getRunwayDays(remainQuota, recentUsage)
 
+  let runwayDisplay: string
+  if (runwayDays === null) {
+    runwayDisplay =
+      remainQuota <= 0 ? t('Balance depleted') : t('No recent usage')
+  } else if (runwayDays < 1) {
+    runwayDisplay = t('Less than 1 day left')
+  } else if (runwayDays > 999) {
+    runwayDisplay = `999+ ${t('days')}`
+  } else {
+    runwayDisplay = `~${formatNumber(Math.floor(runwayDays))} ${t('days')}`
+  }
+
   const todayUsageDisplay = formatQuota(recentUsage)
 
   const items = useSummaryCardsConfig({
@@ -236,7 +248,7 @@ export function SummaryCards() {
   })
 
   return (
-    <div className='bg-card overflow-hidden rounded-2xl border shadow-xs'>
+    <div className='bg-card border-border/60 overflow-hidden rounded-2xl border shadow-[var(--soft-shadow-sm)]'>
       <div className='grid xl:grid-cols-[minmax(0,1fr)_19rem]'>
         <div className='flex flex-col gap-3 p-4 sm:p-5'>
           <div className='flex flex-wrap items-start justify-between gap-3'>
@@ -270,7 +282,7 @@ export function SummaryCards() {
           </StaggerContainer>
         </div>
 
-        <div className='bg-warning/10 flex flex-col justify-between gap-4 border-t p-4 sm:p-5 xl:border-t-0 xl:border-l'>
+        <div className='bg-primary/5 flex flex-col justify-between gap-4 border-t p-4 sm:p-5 xl:border-t-0 xl:border-l'>
           <div className='flex flex-col gap-3'>
             <div className='flex items-center justify-between'>
               <span className='text-muted-foreground text-xs font-medium'>
@@ -323,15 +335,7 @@ export function SummaryCards() {
                     healthLevel === 'caution' && 'text-warning'
                   )}
                 >
-                  {runwayDays !== null
-                    ? runwayDays < 1
-                      ? t('Less than 1 day left')
-                      : runwayDays > 999
-                        ? `999+ ${t('days')}`
-                        : `~${formatNumber(Math.floor(runwayDays))} ${t('days')}`
-                    : remainQuota <= 0
-                      ? t('Balance depleted')
-                      : t('No recent usage')}
+                  {runwayDisplay}
                 </div>
               </div>
             </div>

@@ -267,6 +267,14 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
               size='sm'
             />
           )}
+          {(props.model.timed_prices?.length ?? 0) > 0 && (
+            <StatusBadge
+              label={t('Timed prices')}
+              variant='info'
+              copyable={false}
+              size='sm'
+            />
+          )}
         </div>
         <ModelPerfBadge perf={props.perf} className='row-span-2 self-start' />
 

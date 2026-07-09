@@ -101,6 +101,20 @@ func Distribute() func(c *gin.Context) {
 					}
 				}
 
+				// 智能路由：把虚拟模型名（如 auto-cheap）解析为具体模型名，
+				// 之后的渠道选择、计费、重试全部基于解析出的具体模型。
+				resolvedModel, isSmartRouter, routerErr := service.ResolveSmartRouterModel(c, modelRequest.Model, usingGroup, c.Request.URL.Path)
+				if routerErr != nil {
+					abortWithOpenAiMessage(c, http.StatusServiceUnavailable, i18n.T(c, i18n.MsgDistributorNoAvailableChannel, map[string]any{"Group": usingGroup, "Model": modelRequest.Model}), types.ErrorCodeModelNotFound)
+					return
+				}
+				if isSmartRouter {
+					modelRequest.Model = resolvedModel
+					// defer 保证无论后续渠道选择失败提前返回、还是正常走完 relay，
+					// 请求的最终结果都会被记入候选模型健康记忆
+					defer service.RecordSmartRouterResult(c, resolvedModel)
+				}
+
 				if preferredChannelID, found := service.GetPreferredChannelByAffinity(c, modelRequest.Model, usingGroup); found {
 					affinityUsable := false
 					preferred, err := model.CacheGetChannel(preferredChannelID)

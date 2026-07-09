@@ -17,6 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import type { ColumnDef } from '@tanstack/react-table'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { BadgeCell } from '@/components/data-table'
@@ -24,6 +25,7 @@ import { GroupBadge } from '@/components/group-badge'
 import { LongText } from '@/components/long-text'
 import { StatusBadge } from '@/components/status-badge'
 import { TableId } from '@/components/table-id'
+import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
 import {
@@ -74,6 +76,33 @@ export function useUsersColumns(): ColumnDef<User>[] {
       enableSorting: false,
       enableHiding: false,
       size: 40,
+    },
+    {
+      id: 'expander',
+      header: () => null,
+      cell: ({ row }) => (
+        <Button
+          variant='ghost'
+          size='icon-xs'
+          aria-label={
+            row.getIsExpanded()
+              ? t('Collapse organization')
+              : t('Expand organization')
+          }
+          aria-expanded={row.getIsExpanded()}
+          onClick={row.getToggleExpandedHandler()}
+        >
+          {row.getIsExpanded() ? (
+            <ChevronDown className='size-3.5' />
+          ) : (
+            <ChevronRight className='size-3.5' />
+          )}
+        </Button>
+      ),
+      enableSorting: false,
+      enableHiding: false,
+      size: 36,
+      meta: { mobileHidden: true },
     },
     {
       accessorKey: 'id',

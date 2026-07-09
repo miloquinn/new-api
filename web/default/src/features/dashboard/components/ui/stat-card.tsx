@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { type LucideIcon } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { useId, type ReactNode } from 'react'
 
 import { Skeleton } from '@/components/ui/skeleton'
@@ -52,8 +52,8 @@ interface StatCardProps {
 }
 
 const TONE_CLASSES: Record<StatCardTone, string> = {
-  rose: 'from-rose-500/80 via-rose-300/70 to-rose-200/20 dark:from-rose-400/70 dark:via-rose-500/30 dark:to-rose-500/5',
-  teal: 'from-teal-500/80 via-teal-300/70 to-teal-200/20 dark:from-teal-400/70 dark:via-teal-500/30 dark:to-teal-500/5',
+  rose: 'from-warning/80 via-warning/45 to-warning/10 dark:from-warning/70 dark:via-warning/30 dark:to-warning/5',
+  teal: 'from-primary/80 via-primary/45 to-primary/10 dark:from-primary/70 dark:via-primary/30 dark:to-primary/5',
   gray: 'from-muted-foreground/50 via-muted-foreground/20 to-transparent dark:from-muted-foreground/40 dark:via-muted-foreground/20',
 }
 
@@ -71,14 +71,26 @@ const DETAIL_TONE_CLASSES: Record<StatCardDetailTone, string> = {
   destructive: 'text-destructive',
 }
 
-function normalizeSparkline(values?: number[]): number[] {
+function normalizeSparkline(
+  values?: number[]
+): Array<{ key: string; height: number }> {
   if (!values?.length) return []
 
   const sanitized = values.map((value) => Math.max(0, Number(value) || 0))
   const max = Math.max(...sanitized)
-  if (max <= 0) return sanitized.map(() => 0)
+  const heights =
+    max <= 0
+      ? sanitized.map(() => 0)
+      : sanitized.map((value) => Math.max(8, (value / max) * 100))
 
-  return sanitized.map((value) => Math.max(8, (value / max) * 100))
+  // Positional bars need stable keys; encode the occurrence count per height
+  // so duplicate values still get unique, deterministic keys.
+  const seen = new Map<number, number>()
+  return heights.map((height) => {
+    const occurrence = seen.get(height) ?? 0
+    seen.set(height, occurrence + 1)
+    return { key: `${height}-${occurrence}`, height }
+  })
 }
 
 function buildLineSparkline(values?: number[]) {
@@ -97,7 +109,12 @@ function buildLineSparkline(values?: number[]) {
       sanitized.length === 1
         ? width / 2
         : (index / (sanitized.length - 1)) * width
-    const normalized = range > 0 ? (value - min) / range : max > 0 ? 0.5 : 0
+    let normalized = 0
+    if (range > 0) {
+      normalized = (value - min) / range
+    } else if (max > 0) {
+      normalized = 0.5
+    }
     const y = height - padding - normalized * (height - padding * 2)
 
     return { x, y }
@@ -106,8 +123,9 @@ function buildLineSparkline(values?: number[]) {
   const linePath = points
     .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`)
     .join(' ')
-  const firstPoint = points[0]
-  const lastPoint = points[points.length - 1]
+  const firstPoint = points.at(0)
+  const lastPoint = points.at(-1)
+  if (!firstPoint || !lastPoint) return null
   const areaPath = `${linePath} L ${lastPoint.x} ${height} L ${firstPoint.x} ${height} Z`
 
   return {
@@ -118,7 +136,7 @@ function buildLineSparkline(values?: number[]) {
 
 function LineSparkline(props: { values?: number[]; tone: StatCardTone }) {
   const rawGradientId = useId()
-  const gradientId = `stat-card-line-${rawGradientId.replace(/:/g, '')}`
+  const gradientId = `stat-card-line-${rawGradientId.replaceAll(':', '')}`
   const paths = buildLineSparkline(props.values)
 
   if (!paths) return <div className='h-8' aria-hidden='true' />
@@ -162,15 +180,15 @@ function BarSparkline(props: { values?: number[]; tone: StatCardTone }) {
 
   return (
     <div className='flex h-8 items-end gap-1' aria-hidden='true'>
-      {sparkline.map((height, index) => (
+      {sparkline.map((bar) => (
         <span
-          key={`spark-${index}`}
+          key={bar.key}
           className={cn(
             'flex-1 rounded-t-sm bg-linear-to-t',
-            height <= 0 && 'opacity-20',
+            bar.height <= 0 && 'opacity-20',
             TONE_CLASSES[props.tone]
           )}
-          style={{ height: `${height}%` }}
+          style={{ height: `${bar.height}%` }}
         />
       ))}
     </div>
@@ -208,6 +226,45 @@ export function StatCard(props: StatCardProps) {
   const tone = props.tone ?? 'gray'
   const sparklineVariant = props.sparklineVariant ?? 'bars'
 
+  let body: ReactNode
+  if (props.loading) {
+    body = (
+      <div className='flex flex-col gap-1.5'>
+        <Skeleton className='h-7 w-24' />
+        <Skeleton className='h-3.5 w-32' />
+      </div>
+    )
+  } else if (props.error) {
+    body = (
+      <div className='flex flex-col gap-1'>
+        <div className='text-muted-foreground mt-0.5 font-mono text-base font-bold tracking-tight break-all tabular-nums sm:text-2xl'>
+          --
+        </div>
+        <p className='text-muted-foreground/60 text-xs'>{props.description}</p>
+      </div>
+    )
+  } else {
+    body = (
+      <div className='flex flex-col gap-1'>
+        <div className='text-foreground font-mono text-2xl font-semibold tracking-tight break-all tabular-nums'>
+          {props.value}
+        </div>
+        <p className='text-muted-foreground/60 text-xs leading-relaxed'>
+          {props.description}
+        </p>
+      </div>
+    )
+  }
+
+  let footer: ReactNode
+  if (props.details?.length) {
+    footer = <StatCardDetails details={props.details} />
+  } else if (sparklineVariant === 'line') {
+    footer = <LineSparkline values={props.sparkline} tone={tone} />
+  } else {
+    footer = <BarSparkline values={props.sparkline} tone={tone} />
+  }
+
   return (
     <div className='group flex min-h-32 flex-col justify-between gap-3'>
       <div className='flex items-start justify-between gap-1'>
@@ -221,38 +278,9 @@ export function StatCard(props: StatCardProps) {
         {props.action && <div className='shrink-0'>{props.action}</div>}
       </div>
 
-      {props.loading ? (
-        <div className='flex flex-col gap-1.5'>
-          <Skeleton className='h-7 w-24' />
-          <Skeleton className='h-3.5 w-32' />
-        </div>
-      ) : props.error ? (
-        <div className='flex flex-col gap-1'>
-          <div className='text-muted-foreground mt-0.5 font-mono text-base font-bold tracking-tight break-all tabular-nums sm:text-2xl'>
-            --
-          </div>
-          <p className='text-muted-foreground/60 text-xs'>
-            {props.description}
-          </p>
-        </div>
-      ) : (
-        <div className='flex flex-col gap-1'>
-          <div className='text-foreground font-mono text-2xl font-semibold tracking-tight break-all tabular-nums'>
-            {props.value}
-          </div>
-          <p className='text-muted-foreground/60 text-xs leading-relaxed'>
-            {props.description}
-          </p>
-        </div>
-      )}
+      {body}
 
-      {props.details?.length ? (
-        <StatCardDetails details={props.details} />
-      ) : sparklineVariant === 'line' ? (
-        <LineSparkline values={props.sparkline} tone={tone} />
-      ) : (
-        <BarSparkline values={props.sparkline} tone={tone} />
-      )}
+      {footer}
     </div>
   )
 }

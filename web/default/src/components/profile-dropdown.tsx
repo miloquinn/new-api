@@ -47,6 +47,7 @@ export function ProfileDropdown() {
   const user = useAuthStore((state) => state.auth.user)
   const { displayName, roleLabel } = useUserDisplay(user)
   const isSuperAdmin = user?.role === ROLE.SUPER_ADMIN
+  const isAdmin = user?.role === ROLE.ADMIN
   const isWalletVisible = useIsSidebarModuleVisible('/wallet')
   const avatarName = user?.username || displayName
   const avatarFallback = getUserAvatarFallback(avatarName)
@@ -54,14 +55,28 @@ export function ProfileDropdown() {
     () => getUserAvatarStyle(avatarName),
     [avatarName]
   )
+  let roleBadgeClassName =
+    'bg-muted text-muted-foreground border border-transparent'
+  if (isSuperAdmin) {
+    roleBadgeClassName =
+      'border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400'
+  } else if (isAdmin) {
+    roleBadgeClassName =
+      'border border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-400'
+  }
 
   return (
     <>
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger
-          render={<Button variant='ghost' className='relative size-6 p-0' />}
+          render={
+            <Button
+              variant='ghost'
+              className='hover:ring-ring/40 relative size-7 rounded-full p-0 transition-shadow hover:ring-2'
+            />
+          }
         >
-          <Avatar className='size-6'>
+          <Avatar className='size-7'>
             <AvatarFallback
               className={`${avatarFallbackClassName} text-[11px]`}
               style={avatarFallbackStyle}
@@ -70,52 +85,56 @@ export function ProfileDropdown() {
             </AvatarFallback>
           </Avatar>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align='end' sideOffset={8} className='w-56'>
-          <div className='flex items-center gap-2 px-1.5 py-1.5'>
-            <Avatar className='size-8'>
+        <DropdownMenuContent align='end' sideOffset={8} className='w-64 p-1.5'>
+          <div className='from-muted/80 to-muted/30 mb-1 flex items-center gap-3 rounded-lg bg-gradient-to-br px-2.5 py-3'>
+            <Avatar className='ring-background size-10 shadow-sm ring-2'>
               <AvatarFallback
-                className={`${avatarFallbackClassName} text-xs`}
+                className={`${avatarFallbackClassName} text-sm`}
                 style={avatarFallbackStyle}
               >
                 {avatarFallback}
               </AvatarFallback>
             </Avatar>
-            <div className='flex flex-1 flex-col gap-0.5 overflow-hidden'>
-              <p className='text-foreground truncate text-sm font-medium'>
+            <div className='flex flex-1 flex-col gap-1.5 overflow-hidden'>
+              <p className='text-foreground truncate text-sm leading-none font-semibold'>
                 {displayName}
               </p>
-              <div className='flex items-center gap-1.5'>
-                <span className='text-muted-foreground text-xs'>
+              <div className='flex items-center gap-1'>
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-[10px] leading-none font-medium ${roleBadgeClassName}`}
+                >
                   {roleLabel}
                 </span>
-                {user?.group && (
-                  <>
-                    <span className='text-muted-foreground text-xs'>·</span>
-                    <span className='text-muted-foreground truncate text-xs'>
-                      {String(user.group)}
-                    </span>
-                  </>
-                )}
+                {user?.group ? (
+                  <span className='text-muted-foreground border-border rounded-full border px-1.5 py-0.5 font-mono text-[10px] leading-none'>
+                    {String(user.group)}
+                  </span>
+                ) : null}
               </div>
             </div>
           </div>
 
-          <DropdownMenuSeparator />
-
-          <DropdownMenuItem onClick={() => navigate({ to: '/profile' })}>
-            <User className='size-4' />
+          <DropdownMenuItem
+            className='gap-2.5 py-2'
+            onClick={() => navigate({ to: '/profile' })}
+          >
+            <User className='text-muted-foreground size-4' />
             {t('Profile')}
           </DropdownMenuItem>
 
           {isWalletVisible && (
-            <DropdownMenuItem onClick={() => navigate({ to: '/wallet' })}>
-              <Wallet className='size-4' />
+            <DropdownMenuItem
+              className='gap-2.5 py-2'
+              onClick={() => navigate({ to: '/wallet' })}
+            >
+              <Wallet className='text-muted-foreground size-4' />
               {t('Wallet')}
             </DropdownMenuItem>
           )}
 
           {isSuperAdmin && (
             <DropdownMenuItem
+              className='gap-2.5 py-2'
               onClick={() =>
                 navigate({
                   to: '/system-settings/site/$section',
@@ -123,14 +142,18 @@ export function ProfileDropdown() {
                 })
               }
             >
-              <Settings className='size-4' />
+              <Settings className='text-muted-foreground size-4' />
               {t('System Settings')}
             </DropdownMenuItem>
           )}
 
           <DropdownMenuSeparator />
 
-          <DropdownMenuItem variant='destructive' onClick={() => setOpen(true)}>
+          <DropdownMenuItem
+            variant='destructive'
+            className='gap-2.5 py-2'
+            onClick={() => setOpen(true)}
+          >
             <LogOut className='size-4' />
             {t('Sign out')}
           </DropdownMenuItem>

@@ -135,6 +135,13 @@ func SetApiRouter(router *gin.Engine) {
 				adminRoute.DELETE("/:id/oauth/bindings/:provider_id", controller.UnbindCustomOAuthByAdmin)
 				adminRoute.DELETE("/:id/bindings/:binding_type", controller.AdminClearUserBinding)
 				adminRoute.GET("/:id", controller.GetUser)
+				adminRoute.GET("/:id/org-structure", controller.GetUserOrganizationStructure)
+				adminRoute.GET("/:id/org-roles", controller.AdminGetOrganizationAssignableRoles)
+				adminRoute.PUT("/:id/org-members", controller.AdminUpdateOrganizationMember)
+				adminRoute.POST("/:id/org-members/:member_id/status", controller.AdminUpdateOrganizationMemberStatus)
+				adminRoute.POST("/:id/org-departments", controller.AdminCreateOrganizationDepartment)
+				adminRoute.PUT("/:id/org-departments", controller.AdminUpdateOrganizationDepartment)
+				adminRoute.DELETE("/:id/org-departments/:dept_id", controller.AdminDeleteOrganizationDepartment)
 				adminRoute.POST("/", controller.CreateUser)
 				adminRoute.POST("/manage", controller.ManageUser)
 				adminRoute.PUT("/", controller.UpdateUser)
@@ -240,10 +247,19 @@ func SetApiRouter(router *gin.Engine) {
 			orgPermissionRoute.DELETE("/roles/:id", controller.DeleteOrganizationRole)
 			orgPermissionRoute.GET("/members", controller.GetOrganizationMembers)
 			orgPermissionRoute.POST("/members", controller.CreateOrganizationMemberAccount)
+			orgPermissionRoute.PUT("/members", controller.UpdateOrganizationMemberAssignment)
+			orgPermissionRoute.POST("/members/:id/status", controller.UpdateOrganizationMemberStatus)
+			orgPermissionRoute.POST("/members/:id/reset_password", controller.ResetOrganizationMemberPassword)
+			orgPermissionRoute.GET("/departments", controller.GetOrganizationDepartments)
+			orgPermissionRoute.POST("/departments", controller.CreateOrganizationDepartment)
+			orgPermissionRoute.PUT("/departments", controller.UpdateOrganizationDepartment)
+			orgPermissionRoute.DELETE("/departments/:id", controller.DeleteOrganizationDepartment)
 			orgPermissionRoute.GET("/invitations", controller.GetOrganizationInvitations)
 			orgPermissionRoute.POST("/invitations", controller.CreateOrganizationInvitation)
 			orgPermissionRoute.POST("/invitations/accept", controller.AcceptOrganizationInvitation)
 			orgPermissionRoute.DELETE("/invitations/:id", controller.RevokeOrganizationInvitation)
+			orgPermissionRoute.GET("/usage", controller.GetOrganizationUsage)
+			orgPermissionRoute.GET("/logs", controller.GetOrganizationLogs)
 		}
 		tokenRoute := apiRouter.Group("/token")
 		tokenRoute.Use(middleware.UserAuth())
@@ -312,6 +328,7 @@ func SetApiRouter(router *gin.Engine) {
 		dataRoute.GET("/", middleware.AdminAuth(), controller.GetAllQuotaDates)
 		dataRoute.GET("/users", middleware.AdminAuth(), controller.GetQuotaDatesByUser)
 		dataRoute.GET("/self", middleware.UserAuth(), controller.GetUserQuotaDates)
+		dataRoute.GET("/user/:id", middleware.UserAuth(), controller.GetUserQuotaDetail)
 		dataRoute.GET("/flow", middleware.AdminAuth(), controller.GetAllFlowQuotaDates)
 		dataRoute.GET("/flow/self", middleware.UserAuth(), controller.GetUserFlowQuotaDates)
 
@@ -332,6 +349,15 @@ func SetApiRouter(router *gin.Engine) {
 			prefillGroupRoute.POST("/", controller.CreatePrefillGroup)
 			prefillGroupRoute.PUT("/", controller.UpdatePrefillGroup)
 			prefillGroupRoute.DELETE("/:id", controller.DeletePrefillGroup)
+		}
+
+		smartRouterRoute := apiRouter.Group("/smart_router")
+		smartRouterRoute.Use(middleware.AdminAuth())
+		{
+			smartRouterRoute.GET("/", controller.GetSmartRouters)
+			smartRouterRoute.POST("/", controller.CreateSmartRouter)
+			smartRouterRoute.PUT("/", controller.UpdateSmartRouter)
+			smartRouterRoute.DELETE("/:id", controller.DeleteSmartRouter)
 		}
 
 		mjRoute := apiRouter.Group("/mj")

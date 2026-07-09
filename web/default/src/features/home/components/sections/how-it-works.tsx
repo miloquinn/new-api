@@ -61,7 +61,12 @@ export function HowItWorks() {
           </h2>
         </AnimateInView>
 
-        <div className='grid gap-8 md:grid-cols-3 md:gap-12'>
+        <div className='relative grid gap-8 md:grid-cols-3 md:gap-12'>
+          {/* Connecting line between steps (desktop only) */}
+          <div
+            aria-hidden
+            className='via-border absolute top-8 right-[16%] left-[16%] hidden h-px bg-gradient-to-r from-transparent to-transparent md:block'
+          />
           {steps.map((step, i) => (
             <AnimateInView
               key={step.num}
@@ -70,10 +75,10 @@ export function HowItWorks() {
               className='relative flex flex-col items-center text-center'
             >
               <div className='relative mb-6'>
-                <div className='text-muted-foreground border-border/50 bg-muted/30 flex size-16 items-center justify-center rounded-2xl border transition-colors'>
+                <div className='text-primary border-primary/15 bg-card flex size-16 items-center justify-center rounded-2xl border shadow-[var(--soft-shadow-sm)] transition-colors'>
                   {step.icon}
                 </div>
-                <div className='bg-foreground text-background absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full text-xs font-bold'>
+                <div className='bg-primary text-primary-foreground absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full text-xs font-bold shadow-[var(--soft-shadow-xs)]'>
                   {step.num}
                 </div>
               </div>
