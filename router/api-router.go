@@ -229,6 +229,22 @@ func SetApiRouter(router *gin.Engine) {
 		}
 		registerChannelRoutes(apiRouter)
 		registerAuthzRoutes(apiRouter)
+		orgPermissionRoute := apiRouter.Group("/org")
+		orgPermissionRoute.Use(middleware.UserAuth())
+		{
+			orgPermissionRoute.GET("/permission/catalog", controller.GetOrganizationPermissionCatalog)
+			orgPermissionRoute.GET("/roles", controller.GetOrganizationRoles)
+			orgPermissionRoute.GET("/roles/:id", controller.GetOrganizationRole)
+			orgPermissionRoute.POST("/roles", controller.CreateOrganizationRole)
+			orgPermissionRoute.PUT("/roles", controller.UpdateOrganizationRole)
+			orgPermissionRoute.DELETE("/roles/:id", controller.DeleteOrganizationRole)
+			orgPermissionRoute.GET("/members", controller.GetOrganizationMembers)
+			orgPermissionRoute.POST("/members", controller.CreateOrganizationMemberAccount)
+			orgPermissionRoute.GET("/invitations", controller.GetOrganizationInvitations)
+			orgPermissionRoute.POST("/invitations", controller.CreateOrganizationInvitation)
+			orgPermissionRoute.POST("/invitations/accept", controller.AcceptOrganizationInvitation)
+			orgPermissionRoute.DELETE("/invitations/:id", controller.RevokeOrganizationInvitation)
+		}
 		tokenRoute := apiRouter.Group("/token")
 		tokenRoute.Use(middleware.UserAuth())
 		{

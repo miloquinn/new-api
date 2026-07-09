@@ -135,6 +135,16 @@ export function SignUpForm({
     }
   }, [])
 
+  const organizationInviteToken = useMemo(() => {
+    if (typeof window === 'undefined') return ''
+    const params = new URLSearchParams(window.location.search)
+    return (
+      params.get('organization_invite_token')?.trim() ||
+      params.get('invite')?.trim() ||
+      ''
+    )
+  }, [])
+
   async function onSubmit(data: z.infer<typeof registerFormSchema>) {
     if (requiresLegalConsent && !agreedToLegal) {
       toast.error(legalConsentErrorMessage)
@@ -163,6 +173,7 @@ export function SignUpForm({
         email: data.email || undefined,
         verification_code: verificationCode || undefined,
         aff_code: getAffiliateCode(),
+        organization_invite_token: organizationInviteToken || undefined,
         turnstile: turnstileToken,
       })
 
@@ -172,7 +183,7 @@ export function SignUpForm({
       } else {
         toast.error(res?.message || t('Failed to create account'))
       }
-    } catch (_error) {
+    } catch {
       // Errors are handled by global interceptor
     } finally {
       setIsLoading(false)
@@ -216,11 +227,16 @@ export function SignUpForm({
       } else {
         toast.error(res?.message || t('Login failed'))
       }
-    } catch (_error) {
+    } catch {
       toast.error(t('Login failed'))
     } finally {
       setIsWeChatSubmitting(false)
     }
+  }
+
+  let sendCodeButtonContent = t('Send code')
+  if (isActive) {
+    sendCodeButtonContent = t('Resend ({{seconds}}s)', { seconds: secondsLeft })
   }
 
   return (
@@ -323,12 +339,10 @@ export function SignUpForm({
                 }
                 onClick={handleSendVerificationCode}
               >
-                {isActive ? (
-                  t('Resend ({{seconds}}s)', { seconds: secondsLeft })
-                ) : isSendingCode ? (
+                {isSendingCode ? (
                   <Loader2 className='h-4 w-4 animate-spin' />
                 ) : (
-                  t('Send code')
+                  sendCodeButtonContent
                 )}
               </Button>
             </div>

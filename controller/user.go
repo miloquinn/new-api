@@ -249,7 +249,27 @@ func Register(c *gin.Context) {
 	if common.EmailVerificationEnabled {
 		cleanUser.Email = user.Email
 	}
-	if err := cleanUser.Insert(inviterId); err != nil {
+	inviteToken := strings.TrimSpace(user.OrganizationInviteToken)
+	if inviteToken != "" && cleanUser.Email == "" {
+		cleanUser.Email = user.Email
+	}
+	var insertedUser model.User
+	if inviteToken != "" {
+		err = model.DB.Transaction(func(tx *gorm.DB) error {
+			if err := cleanUser.InsertWithTx(tx, inviterId); err != nil {
+				return err
+			}
+			_, err := model.AcceptOrganizationInvitationWithTx(tx, inviteToken, cleanUser.Id, cleanUser.Email)
+			return err
+		})
+		if err == nil {
+			cleanUser.FinishInsert(inviterId)
+			insertedUser = cleanUser
+		}
+	} else {
+		err = cleanUser.Insert(inviterId)
+	}
+	if err != nil {
 		if errors.Is(err, model.ErrEmailAlreadyTaken) {
 			common.ApiErrorI18n(c, i18n.MsgUserEmailAlreadyTaken)
 			return
@@ -259,10 +279,11 @@ func Register(c *gin.Context) {
 	}
 
 	// 获取插入后的用户ID
-	var insertedUser model.User
-	if err := model.DB.Where("username = ?", cleanUser.Username).First(&insertedUser).Error; err != nil {
-		common.ApiErrorI18n(c, i18n.MsgUserRegisterFailed)
-		return
+	if insertedUser.Id == 0 {
+		if err := model.DB.Where("username = ?", cleanUser.Username).First(&insertedUser).Error; err != nil {
+			common.ApiErrorI18n(c, i18n.MsgUserRegisterFailed)
+			return
+		}
 	}
 	// 生成默认令牌
 	if constant.GenerateDefaultToken {

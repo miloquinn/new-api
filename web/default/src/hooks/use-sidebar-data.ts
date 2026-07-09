@@ -28,6 +28,7 @@ import {
   MessageSquare,
   Radio,
   ServerCog,
+  ShieldCheck,
   Settings,
   Ticket,
   User,
@@ -112,6 +113,17 @@ export function useSidebarData(): SidebarData {
             title: t('Profile'),
             url: '/profile',
             icon: User,
+          },
+        ],
+      },
+      {
+        id: 'organization',
+        title: t('Organization'),
+        items: [
+          {
+            title: t('Organization Roles'),
+            url: '/organization-roles',
+            icon: ShieldCheck,
           },
         ],
       },
